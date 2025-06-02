@@ -27,7 +27,7 @@ class Popcorn {
         if (this.mode === 'normal') {
             this.view.minX = 0;
             this.view.maxX = 1;
-            this.view.maxY = 0.5;
+            this.view.maxY = 1;
         } else if (this.mode === 'invert') {
             this.view.minX = 0;
             this.view.maxX = 1;

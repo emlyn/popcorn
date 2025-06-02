@@ -68,6 +68,9 @@ class Popcorn {
                         this.context.fillStyle = 'black';
                     } else if (this.colour == 'value') {
                         this.context.fillStyle = `hsl(${j * 360 / i}, 100%, 40%)`;
+                    } else if (this.colour == 'height') {
+                        const d = i - 1;
+                        this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
                     } else if (this.colour == 'delta') {
                         const d = Math.abs(i - j) - 1;
                         this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;

@@ -1,3 +1,9 @@
+* {
+    box-sizing: border-box; /* Include padding and border in element's total width and height */
+    margin: 0;
+    padding: 0;
+}
+
 /* The button used to open the sidebar */
 #sidebtn {
     z-index: 2; /* Stay on top of the sidebar */
@@ -17,7 +23,7 @@
 }
 
 .showside #sidebtn {
-    left: 240px;
+    left: 210px;
     rotate: 180deg;
 }
 
@@ -32,15 +38,29 @@
     left: 0;
     border-right: 1px solid #ccc; /* Right border */
     overflow-x: hidden; /* Disable horizontal scroll */
-    padding-top: 60px; /* Place content 60px from the top */
+    padding-top: 50px;
     transition: 0.5s; /* 0.5 second transition effect to slide in the sidebar */
 }
 
 .showside #sidebar {
     width: 250px;
-    padding-left: 2em;
+    padding-left: 40px;
+    padding-right: 40px;
 }
 
 #content {
     padding: 5em;
+}
+
+.slidecontainer {
+  width: 100%;
+}
+
+.slider {
+  width: 100%;
+  opacity: 0.7;
+}
+
+.slider:hover {
+  opacity: 1;
 }

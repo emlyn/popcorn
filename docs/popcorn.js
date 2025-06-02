@@ -36,6 +36,10 @@ class Popcorn {
             this.view.minX = -this.levels;
             this.view.maxX = this.levels;
             this.view.maxY = this.levels;
+        } else if (this.mode === 'semicircle') {
+            this.view.minX = -this.levels;
+            this.view.maxX = this.levels;
+            this.view.maxY = this.levels;
         }
 
         this.canvas.width = window.innerWidth;
@@ -52,18 +56,22 @@ class Popcorn {
         this.draw();
     }
     draw() {
-        for (let i = 1; i <= this.levels; i++) {
-            for (let j = 1; j < i; j++) {
+        for (let i = 0; i <= this.levels; i++) {
+            for (let j = 0; j <= i; j++) {
                 if (gcd(i, j) === 1) {
                     if (this.mode === 'normal') {
                         const r = 0.03/i;
                         this.plot(j/i, 1/i, r);
                     } else if (this.mode === 'invert') {
-                        const r = 0.02/Math.sqrt(i);
+                        const r = 0.01/Math.sqrt(i);
                         this.plot(j/i, i, r);
                     } else if (this.mode === 'stretch') {
                         const r = 0.5;
                         this.plot((2*j/i-1)*i, i, r);
+                    } else if (this.mode === 'semicircle') {
+                        const theta = Math.PI * j / i;
+                        // const r = 0.5;
+                        this.plot(i*Math.cos(theta), i*Math.sin(theta), 0.5);
                     }
                 }
             }
@@ -72,7 +80,7 @@ class Popcorn {
     plot(x, y, r) {
         const rh = r * this.aspect;
         this.context.beginPath();
-        this.context.ellipse(x - r/2, y - r/2, r, rh, 0, 0, Math.PI * 2);
+        this.context.ellipse(x, y, r, rh, 0, 0, Math.PI * 2);
         this.context.fill();
     }
 }

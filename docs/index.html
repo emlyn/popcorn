@@ -12,7 +12,9 @@
     <script src="popcorn.js"></script>
 </head>
 <body>
-    <a href="javascript:void(0)" id="sidebtn" onclick="showSide()">»</a>
+    <div id="sidebtn" onclick="showSide()">
+        <span>»</span>
+    </div>
 
     <div id="sidebar" class="sidebar">
         <h2>Settings</h2>
@@ -27,6 +29,8 @@
         <label><input type="radio" name="xform" value="invert"> Invert</label>
         <br>
         <label><input type="radio" name="xform" value="stretch"> Stretch</label>
+        <br>
+        <label><input type="radio" name="xform" value="semicircle"> Semicircle</label>
     </div>
 
     <canvas id="canvas" width="800" height="600"></canvas>

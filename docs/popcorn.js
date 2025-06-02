@@ -15,6 +15,7 @@ class Popcorn {
         this.context = canvas.getContext('2d');
         this.levels = 100;
         this.mode = 'normal';
+        this.colour = 'black';
         this.view = {
             minX: 0,
             minY: 0,
@@ -56,9 +57,24 @@ class Popcorn {
         this.draw();
     }
     draw() {
+        this.context.fillStyle = "white";
+        this.context.fillRect(this.view.minX, this.view.minY,
+                              this.view.maxX - this.view.minX,
+                              this.view.maxY - this.view.minY);
         for (let i = 0; i <= this.levels; i++) {
             for (let j = 0; j <= i; j++) {
                 if (gcd(i, j) === 1) {
+                    if (this.colour == 'black') {
+                        this.context.fillStyle = 'black';
+                    } else if (this.colour == 'value') {
+                        this.context.fillStyle = `hsl(${j * 360 / i}, 100%, 40%)`;
+                    } else if (this.colour == 'delta') {
+                        const d = Math.abs(i - j) - 1;
+                        this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
+                    } else if (this.colour == 'symmetric') {
+                        const d = Math.min(j, Math.abs(i - j)) - 1;
+                        this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
+                    }
                     if (this.mode === 'normal') {
                         const r = 0.03/i;
                         this.plot(j/i, 1/i, r);
@@ -71,7 +87,7 @@ class Popcorn {
                     } else if (this.mode === 'semicircle') {
                         const theta = Math.PI * j / i;
                         // const r = 0.5;
-                        this.plot(i*Math.cos(theta), i*Math.sin(theta), 0.5);
+                        this.plot(-i*Math.cos(theta), i*Math.sin(theta), 0.5);
                     }
                 }
             }
@@ -105,6 +121,13 @@ function init() {
         el.onchange = function() {
             console.log('Transform changed to', this.value);
             popcorn.mode = this.value;
+            popcorn.resize();
+        }
+    }
+    for (var el of document.querySelectorAll('input[type="radio"][name="colour"]')) {
+        el.onchange = function() {
+            console.log('Colour changed to', this.value);
+            popcorn.colour = this.value;
             popcorn.resize();
         }
     }

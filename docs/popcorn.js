@@ -16,51 +16,52 @@ class Popcorn {
         this.levels = 100;
         this.mode = 'normal';
         this.colour = 'black';
-        this.view = {
-            minX: 0,
-            minY: 0,
-            maxX: 1,
-            maxY: 0.5,
-        };
+        this.setView(0, 0, 1, 0.5);
         this.resize();
     }
-    resize() {
-        if (this.mode === 'normal') {
-            this.view.minX = 0;
-            this.view.maxX = 1;
-            this.view.maxY = 1;
-        } else if (this.mode === 'invert') {
-            this.view.minX = 0;
-            this.view.maxX = 1;
-            this.view.maxY = this.levels;
-        } else if (this.mode === 'stretch') {
-            this.view.minX = -this.levels;
-            this.view.maxX = this.levels;
-            this.view.maxY = this.levels;
-        } else if (this.mode === 'semicircle') {
-            this.view.minX = -this.levels;
-            this.view.maxX = this.levels;
-            this.view.maxY = this.levels;
-        }
+    setView(minX, minY, maxX, maxY) {
+        const a = this.canvas.width / (maxX - minX);
+        const d = this.canvas.height / (minY - maxY);
+        const e = -a * minX;
+        const f = this.canvas.height - d * minY;
+        this.context.setTransform(a, 0, 0, d, e, f);
+    }
+    getView() {
+        const m = this.context.getTransform();
+        const w = this.canvas.width;
+        const h = this.canvas.height;
 
+        const minx = (h - m.f - m.d * m.e) / (m.d * m.a - m.b);
+        const miny = (h - m.b * minx - m.f) / m.d;
+        const maxx = (w - m.e) * m.d / (m.a * m.d - m.c * m.f - m.c * m.b);
+        const maxy = - (m.f + m.b * maxx) / m.d
+
+        return { minX: minx, minY: miny, maxX: maxx, maxY: maxy };
+    }
+    aspect() {
+        const m = this.context.getTransform();
+        return Math.abs(m.a / m.d);
+    }
+    resize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        const v = this.view;
-        const a = this.canvas.width / (v.maxX - v.minX);
-        const d = this.canvas.height / (v.minY - v.maxY);
-        const e = -a * v.minX;
-        const f = this.canvas.height - d * v.minY;
-        this.context.setTransform(a, 0, 0, d, e, f);
-        this.scaleX = this.canvas.width / (v.maxX - v.minX);
-        this.scaleY = this.canvas.height / (v.maxY - v.minY);
-        this.aspect = Math.abs(this.scaleX / this.scaleY);
+        if (this.mode === 'normal') {
+            this.setView(0, 0, 1, 1);
+        } else if (this.mode === 'invert') {
+            this.setView(0, 0, 1, this.levels);
+        } else if (this.mode === 'stretch') {
+            this.setView(-this.levels, 0, this.levels, this.levels);
+        } else if (this.mode === 'semicircle') {
+            this.setView(-this.levels, 0, this.levels, this.levels);
+        }
         this.draw();
     }
     draw() {
         this.context.fillStyle = "white";
-        this.context.fillRect(this.view.minX, this.view.minY,
-                              this.view.maxX - this.view.minX,
-                              this.view.maxY - this.view.minY);
+        const v = this.getView();
+        this.context.fillRect(v.minX, v.minY,
+                              v.maxX - v.minX,
+                              v.maxY - v.minY);
         for (let i = 0; i <= this.levels; i++) {
             for (let j = 0; j <= i; j++) {
                 if (gcd(i, j) === 1) {
@@ -68,11 +69,11 @@ class Popcorn {
                         this.context.fillStyle = 'black';
                     } else if (this.colour == 'value') {
                         this.context.fillStyle = `hsl(${j * 360 / i}, 100%, 40%)`;
-                    } else if (this.colour == 'height') {
+                    } else if (this.colour == 'denominator') {
                         const d = i - 1;
                         this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
-                    } else if (this.colour == 'delta') {
-                        const d = Math.abs(i - j) - 1;
+                    } else if (this.colour == 'numerator') {
+                        const d = j - 1;
                         this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
                     } else if (this.colour == 'symmetric') {
                         const d = Math.min(j, Math.abs(i - j)) - 1;
@@ -85,11 +86,9 @@ class Popcorn {
                         const r = 0.01/Math.sqrt(i);
                         this.plot(j/i, i, r);
                     } else if (this.mode === 'stretch') {
-                        const r = 0.5;
-                        this.plot((2*j/i-1)*i, i, r);
+                        this.plot((2*j/i-1)*i, i, 0.5);
                     } else if (this.mode === 'semicircle') {
                         const theta = Math.PI * j / i;
-                        // const r = 0.5;
                         this.plot(-i*Math.cos(theta), i*Math.sin(theta), 0.5);
                     }
                 }
@@ -97,7 +96,7 @@ class Popcorn {
         }
     }
     plot(x, y, r) {
-        const rh = r * this.aspect;
+        const rh = r * this.aspect();
         this.context.beginPath();
         this.context.ellipse(x, y, r, rh, 0, 0, Math.PI * 2);
         this.context.fill();
@@ -105,31 +104,29 @@ class Popcorn {
 }
 
 function resize() {
-    if (popcorn) {
-        popcorn.resize();
-    }
+    popcorn?.resize();
 }
 
 function init() {
     const canvas = document.getElementById('canvas');
     popcorn = new Popcorn(canvas);
     document.getElementById('levels').oninput = function() {
-        console.log('Levels changed to', this.value);
         const levels = Math.floor(10**parseFloat(this.value));
+        console.log(`Levels changed to ${levels} (${this.value})`);
         document.getElementById('levelsValue').textContent = levels;
         popcorn.levels = levels;
         popcorn.resize();
     }
     for (var el of document.querySelectorAll('input[type="radio"][name="xform"]')) {
         el.onchange = function() {
-            console.log('Transform changed to', this.value);
+            console.log(`Transform changed to ${this.value}`);
             popcorn.mode = this.value;
             popcorn.resize();
         }
     }
     for (var el of document.querySelectorAll('input[type="radio"][name="colour"]')) {
         el.onchange = function() {
-            console.log('Colour changed to', this.value);
+            console.log(`Colour changed to ${this.value}`);
             popcorn.colour = this.value;
             popcorn.resize();
         }

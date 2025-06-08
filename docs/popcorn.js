@@ -16,8 +16,16 @@ class Popcorn {
         this.levels = 100;
         this.mode = 'normal';
         this.colour = 'black';
-        this.setView(0, 0, 1, 0.5);
+        this.dragging = false;
         this.resize();
+        this.resetView();
+        canvas.addEventListener('mousedown', this.mousedown.bind(this));
+        canvas.addEventListener('mouseup', this.mouseup.bind(this));
+        canvas.addEventListener('mousemove', this.mousemove.bind(this));
+        canvas.addEventListener('mousewheel', this.mousewheel.bind(this));
+        canvas.addEventListener('keydown', this.keydown.bind(this));
+        window.addEventListener('resize', this.resize.bind(this));
+        console.log(`Popcorn initialized with levels=${this.levels}, mode=${this.mode}, colour=${this.colour}`);
     }
     setView(minX, minY, maxX, maxY) {
         const a = this.canvas.width / (maxX - minX);
@@ -27,41 +35,61 @@ class Popcorn {
         this.context.setTransform(a, 0, 0, d, e, f);
     }
     getView() {
-        const m = this.context.getTransform();
+        const mi = this.context.getTransform().inverse();
         const w = this.canvas.width;
         const h = this.canvas.height;
+        const p1 = this.xformPoint({ x: 0, y: 0 }, mi);
+        const p2 = this.xformPoint({ x: w, y: h }, mi);
 
-        const minx = (h - m.f - m.d * m.e) / (m.d * m.a - m.b);
-        const miny = (h - m.b * minx - m.f) / m.d;
-        const maxx = (w - m.e) * m.d / (m.a * m.d - m.c * m.f - m.c * m.b);
-        const maxy = - (m.f + m.b * maxx) / m.d
-
-        return { minX: minx, minY: miny, maxX: maxx, maxY: maxy };
+        return { minX: p1.x, minY: p2.y, maxX: p2.x, maxY: p1.y };
+    }
+    xformPoint(p, m) {
+        return {
+            x: m.a * p.x + m.b * p.y + m.e,
+            y: m.c * p.x + m.d * p.y + m.f,
+        };
+    }
+    getPoint(screenX, screenY) {
+        const m = this.context.getTransform().inverse();
+        return this.xformPoint({ x: screenX, y: screenY }, m);
     }
     aspect() {
+        // Assumes no rotation or skewing
         const m = this.context.getTransform();
         return Math.abs(m.a / m.d);
     }
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+    resetView() {
+        console.log(`Resetting view for levels=${this.levels}, mode=${this.mode}`);
         if (this.mode === 'normal') {
             this.setView(0, 0, 1, 1);
+            console.log(`Setting view for normal mode`, this.context.getTransform());
         } else if (this.mode === 'invert') {
             this.setView(0, 0, 1, this.levels);
         } else if (this.mode === 'stretch') {
             this.setView(-this.levels, 0, this.levels, this.levels);
         } else if (this.mode === 'semicircle') {
             this.setView(-this.levels, 0, this.levels, this.levels);
+        } else {
+            console.error(`Unknown mode: ${this.mode}`);
         }
         this.draw();
     }
+    resize() {
+        // Prevent transform from resetting on resize
+        const m = this.context.getTransform();
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.context.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+        this.draw();
+    }
     draw() {
+        console.debug(`Drawing with levels=${this.levels}, mode=${this.mode}, colour=${this.colour}`);
+        this.context.save();
         this.context.fillStyle = "white";
-        const v = this.getView();
-        this.context.fillRect(v.minX, v.minY,
-                              v.maxX - v.minX,
-                              v.maxY - v.minY);
+        this.context.setTransform(1, 0, 0, 1, 0, 0);
+        this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.context.restore();
+        //const v = this.getView();
         for (let i = 0; i <= this.levels; i++) {
             for (let j = 0; j <= i; j++) {
                 if (gcd(i, j) === 1) {
@@ -110,10 +138,69 @@ class Popcorn {
         this.context.ellipse(x, y, r, rh, 0, 0, Math.PI * 2);
         this.context.fill();
     }
-}
-
-function resize() {
-    popcorn?.resize();
+    mousedown(event) {
+        if (event.button == 0) {
+            this.dragging = true;
+        }
+        event.preventDefault();
+    }
+    mouseup(event) {
+        if (event.button == 0) {
+            this.dragging = false;
+        }
+        event.preventDefault();
+    }
+    mousemove(event) {
+        const p = {x: event.clientX, y: event.clientY};
+        const d = {x: event.movementX, y: event.movementY};
+        if (this.dragging && (d.x !== 0 || d.y !== 0)) {
+            if (event.shiftKey) {
+                // Rotate around the mouse position(?)
+            } else {
+                const m = this.context.getTransform().inverse();
+                const p1 = this.xformPoint(p, m);
+                const p2 = this.xformPoint({x: p.x + d.x, y: p.y + d.y}, m);
+                this.context.translate(p2.x - p1.x, p2.y - p1.y);
+            }
+            this.draw();
+        }
+    }
+    mousewheel(event) {
+        const p = this.getPoint(event.clientX, event.clientY);
+        const scale = Math.pow(1.1, -event.deltaY / 100);
+        if (event.shiftKey) {
+            const m = this.context.getTransform();
+            const p0 = this.xformPoint(p, m);
+            this.context.setTransform(1,0,0,1,0,0);
+            this.context.translate(p0.x, p0.y);
+            this.context.scale(1, scale);
+            this.context.translate(-p0.x, -p0.y);
+            this.context.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+        } else if (event.ctrlKey) {
+            const m = this.context.getTransform();
+            const p0 = this.xformPoint(p, m);
+            this.context.setTransform(1,0,0,1,0,0);
+            this.context.translate(p0.x, p0.y);
+            this.context.scale(scale, 1);
+            this.context.translate(-p0.x, -p0.y);
+            this.context.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+        } else {
+            this.context.translate(p.x, p.y);
+            this.context.scale(scale, scale);
+            this.context.translate(-p.x, -p.y);
+        }
+        this.draw();
+        event.preventDefault();
+    }
+    keydown(event) {
+        console.log(`Key down: ${event.key}`);
+        if (event.key === 'Escape') {
+            console.log(`Escape key pressed, resetting view`);
+            this.dragging = false;
+            this.resetView();
+            event.preventDefault();
+        }
+    }
 }
 
 function init() {
@@ -124,13 +211,13 @@ function init() {
         console.log(`Levels changed to ${levels} (${this.value})`);
         document.getElementById('levelsValue').textContent = levels;
         popcorn.levels = levels;
-        popcorn.resize();
+        popcorn.resetView();
     }
     for (var el of document.querySelectorAll('input[type="radio"][name="xform"]')) {
         el.onchange = function() {
             console.log(`Transform changed to ${this.value}`);
             popcorn.mode = this.value;
-            popcorn.resize();
+            popcorn.resetView();
         }
     }
     for (var el of document.querySelectorAll('input[type="radio"][name="colour"]')) {
@@ -143,4 +230,3 @@ function init() {
 }
 
 window.addEventListener('load', init);
-window.addEventListener('resize', resize);

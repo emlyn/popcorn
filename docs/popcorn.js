@@ -23,7 +23,7 @@ class Popcorn {
         canvas.addEventListener('mouseup', this.mouseup.bind(this));
         canvas.addEventListener('mousemove', this.mousemove.bind(this));
         canvas.addEventListener('mousewheel', this.mousewheel.bind(this));
-        canvas.addEventListener('keydown', this.keydown.bind(this));
+        document.addEventListener('keydown', this.keydown.bind(this));
         window.addEventListener('resize', this.resize.bind(this));
         console.log(`Popcorn initialized with levels=${this.levels}, mode=${this.mode}, colour=${this.colour}`);
     }
@@ -193,6 +193,9 @@ class Popcorn {
         event.preventDefault();
     }
     keydown(event) {
+        if (document.body.classList.contains("showside")) {
+            return;
+        }
         console.log(`Key down: ${event.key}`);
         if (event.key === 'Escape') {
             console.log(`Escape key pressed, resetting view`);

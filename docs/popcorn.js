@@ -2,7 +2,7 @@ function showSide() {
     document.body.classList.toggle("showside");
 }
 
-var popcorn = undefined;
+let popcorn = undefined;
 
 function gcd(a, b) {
     if (b === 0) return a;
@@ -17,6 +17,8 @@ class Popcorn {
         this.mode = 'normal';
         this.colour = 'black';
         this.dragging = false;
+        this.rotatemode = 0;
+        this.angle = 0;
         this.resize();
         this.resetView();
         canvas.addEventListener('mousedown', this.mousedown.bind(this));
@@ -49,9 +51,34 @@ class Popcorn {
             y: m.c * p.x + m.d * p.y + m.f,
         };
     }
+    applyRotation() {
+        if (this.rotatemode === 1) {
+            const p = this.xformPoint({ x: this.canvas.width / 2, y: this.canvas.height / 2 }, this.context.getTransform().inverse());
+            this.context.translate(p.x, p.y);
+            this.context.rotate(-this.angle);
+            this.context.translate(-p.x, -p.y);
+        } else if (this.rotatemode === 2) {
+            const m = this.context.getTransform();
+            this.context.setTransform(1, 0, 0, 1, 0, 0);
+            this.context.translate(this.canvas.width / 2, this.canvas.height / 2);
+            this.context.rotate(this.angle);
+            this.context.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+            this.context.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+        }
+    }
+    getTransform() {
+        let m;
+        try {
+            this.context.save();
+            this.applyRotation();
+            m = this.context.getTransform();
+        } finally {
+            this.context.restore();
+        }
+        return m;
+    }
     getPoint(screenX, screenY) {
-        const m = this.context.getTransform().inverse();
-        return this.xformPoint({ x: screenX, y: screenY }, m);
+        return this.xformPoint({ x: screenX, y: screenY }, this.getTransform().inverse());
     }
     aspect() {
         // Assumes no rotation or skewing
@@ -60,6 +87,7 @@ class Popcorn {
     }
     resetView() {
         console.log(`Resetting view for levels=${this.levels}, mode=${this.mode}`);
+        this.angle = 0;
         if (this.mode === 'normal') {
             this.setView(0, 0, 1, 1);
             console.log(`Setting view for normal mode`, this.context.getTransform());
@@ -84,56 +112,65 @@ class Popcorn {
     }
     draw() {
         console.debug(`Drawing with levels=${this.levels}, mode=${this.mode}, colour=${this.colour}`);
-        this.context.save();
-        this.context.fillStyle = "white";
-        this.context.setTransform(1, 0, 0, 1, 0, 0);
-        this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        this.context.restore();
-        //const v = this.getView();
-        for (let i = 0; i <= this.levels; i++) {
-            for (let j = 0; j <= i; j++) {
-                if (gcd(i, j) === 1) {
-                    if (this.colour == 'black') {
-                        this.context.fillStyle = 'black';
-                    } else if (this.colour == 'value') {
-                        this.context.fillStyle = `hsl(${j * 360 / i}, 100%, 40%)`;
-                    } else if (this.colour == 'denominator') {
-                        const d = i - 1;
-                        this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
-                    } else if (this.colour == 'numerator') {
-                        const d = j - 1;
-                        this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
-                    } else if (this.colour == 'symmetric') {
-                        const d = Math.min(j, Math.abs(i - j)) - 1;
-                        this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
-                    } else if (this.colour == 'ratio') {
-                        const d = j == 0 ? 0 : (Math.floor(36 * i / j) - 36) % 360;
-                        this.context.fillStyle = `hsl(${d}, 100%, 40%)`;
-                    } else if (this.colour == 'quotient') {
-                        const d = j == 0 ? 0 : Math.floor(i / j) - 1;
-                        this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
-                    } else if (this.colour == 'remainder') {
-                        const d = j == 0 ? 0 : i % j;
-                        this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
-                    }
-                    if (this.mode === 'normal') {
-                        const r = 0.03/i;
-                        this.plot(j/i, 1/i, r);
-                    } else if (this.mode === 'invert') {
-                        const r = 0.01/Math.sqrt(i);
-                        this.plot(j/i, i, r);
-                    } else if (this.mode === 'stretch') {
-                        this.plot((2*j/i-1)*i, i, 0.5);
-                    } else if (this.mode === 'semicircle') {
-                        const theta = Math.PI * j / i;
-                        this.plot(-i*Math.cos(theta), i*Math.sin(theta), 0.5);
+        try {
+            this.context.save();
+            this.context.fillStyle = "white";
+            this.context.setTransform(1, 0, 0, 1, 0, 0);
+            this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        } finally {
+            this.context.restore();
+        }
+        try {
+            this.context.save();
+            this.applyRotation();
+            for (let i = 0; i <= this.levels; i++) {
+                for (let j = 0; j <= i; j++) {
+                    if (gcd(i, j) === 1) {
+                        if (this.colour == 'black') {
+                            this.context.fillStyle = 'black';
+                        } else if (this.colour == 'value') {
+                            this.context.fillStyle = `hsl(${j * 360 / i}, 100%, 40%)`;
+                        } else if (this.colour == 'denominator') {
+                            const d = i - 1;
+                            this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
+                        } else if (this.colour == 'numerator') {
+                            const d = j - 1;
+                            this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
+                        } else if (this.colour == 'symmetric') {
+                            const d = Math.min(j, Math.abs(i - j)) - 1;
+                            this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
+                        } else if (this.colour == 'ratio') {
+                            const d = j == 0 ? 0 : (Math.floor(36 * i / j) - 36) % 360;
+                            this.context.fillStyle = `hsl(${d}, 100%, 40%)`;
+                        } else if (this.colour == 'quotient') {
+                            const d = j == 0 ? 0 : Math.floor(i / j) - 1;
+                            this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
+                        } else if (this.colour == 'remainder') {
+                            const d = j == 0 ? 0 : i % j;
+                            this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
+                        }
+                        if (this.mode === 'normal') {
+                            const r = 0.03/i;
+                            this.plot(j/i, 1/i, r);
+                        } else if (this.mode === 'invert') {
+                            const r = 0.01/Math.sqrt(i);
+                            this.plot(j/i, i, r);
+                        } else if (this.mode === 'stretch') {
+                            this.plot((2*j/i-1)*i, i, 0.5);
+                        } else if (this.mode === 'semicircle') {
+                            const theta = Math.PI * j / i;
+                            this.plot(-i*Math.cos(theta), i*Math.sin(theta), 0.5);
+                        }
                     }
                 }
             }
+        } finally {
+            this.context.restore();
         }
     }
     plot(x, y, r) {
-        const rh = r * this.aspect();
+        let rh = r;
+        if (this.rotatemode != 1) rh *= this.aspect();
         this.context.beginPath();
         this.context.ellipse(x, y, r, rh, 0, 0, Math.PI * 2);
         this.context.fill();
@@ -155,12 +192,15 @@ class Popcorn {
         const d = {x: event.movementX, y: event.movementY};
         if (this.dragging && (d.x !== 0 || d.y !== 0)) {
             if (event.shiftKey) {
-                // Rotate around the mouse position(?)
+                if (this.rotatemode !== 0) {
+                    this.angle += d.x / 200;
+                }
             } else {
-                const m = this.context.getTransform().inverse();
+                const m = this.getTransform().inverse();
+                const a = this.rotatemode === 2 ? this.aspect() : 1;
                 const p1 = this.xformPoint(p, m);
                 const p2 = this.xformPoint({x: p.x + d.x, y: p.y + d.y}, m);
-                this.context.translate(p2.x - p1.x, p2.y - p1.y);
+                this.context.translate((p2.x - p1.x)/a, (p2.y - p1.y)*a);
             }
             this.draw();
         }
@@ -168,27 +208,15 @@ class Popcorn {
     mousewheel(event) {
         const p = this.getPoint(event.clientX, event.clientY);
         const scale = Math.pow(1.1, -event.deltaY / 100);
+        this.context.translate(p.x, p.y);
         if (event.shiftKey) {
-            const m = this.context.getTransform();
-            const p0 = this.xformPoint(p, m);
-            this.context.setTransform(1,0,0,1,0,0);
-            this.context.translate(p0.x, p0.y);
             this.context.scale(1, scale);
-            this.context.translate(-p0.x, -p0.y);
-            this.context.transform(m.a, m.b, m.c, m.d, m.e, m.f);
         } else if (event.ctrlKey) {
-            const m = this.context.getTransform();
-            const p0 = this.xformPoint(p, m);
-            this.context.setTransform(1,0,0,1,0,0);
-            this.context.translate(p0.x, p0.y);
             this.context.scale(scale, 1);
-            this.context.translate(-p0.x, -p0.y);
-            this.context.transform(m.a, m.b, m.c, m.d, m.e, m.f);
         } else {
-            this.context.translate(p.x, p.y);
             this.context.scale(scale, scale);
-            this.context.translate(-p.x, -p.y);
         }
+        this.context.translate(-p.x, -p.y);
         this.draw();
         event.preventDefault();
     }
@@ -196,11 +224,16 @@ class Popcorn {
         if (document.body.classList.contains("showside")) {
             return;
         }
-        console.log(`Key down: ${event.key}`);
+        console.log(`Key down: ${event.key}`, event);
         if (event.key === 'Escape') {
             console.log(`Escape key pressed, resetting view`);
             this.dragging = false;
             this.resetView();
+            event.preventDefault();
+        } else if (event.key == 'r' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            this.rotatemode = (this.rotatemode + 1) % 3;
+            console.log(`Rotation mode changed to ${this.rotatemode}`);
+            this.draw();
             event.preventDefault();
         }
     }
@@ -214,20 +247,20 @@ function init() {
         console.log(`Levels changed to ${levels} (${this.value})`);
         document.getElementById('levelsValue').textContent = levels;
         popcorn.levels = levels;
-        popcorn.resetView();
+        popcorn.draw();
     }
-    for (var el of document.querySelectorAll('input[type="radio"][name="xform"]')) {
+    for (let el of document.querySelectorAll('input[type="radio"][name="xform"]')) {
         el.onchange = function() {
             console.log(`Transform changed to ${this.value}`);
             popcorn.mode = this.value;
             popcorn.resetView();
         }
     }
-    for (var el of document.querySelectorAll('input[type="radio"][name="colour"]')) {
+    for (let el of document.querySelectorAll('input[type="radio"][name="colour"]')) {
         el.onchange = function() {
             console.log(`Colour changed to ${this.value}`);
             popcorn.colour = this.value;
-            popcorn.resize();
+            popcorn.draw();
         }
     }
 }

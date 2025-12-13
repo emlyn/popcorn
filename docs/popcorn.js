@@ -6,6 +6,7 @@ let popcorn = undefined;
 
 function gcd(a, b) {
     if (b === 0) return a;
+    if (b < 0) return gcd(a, -b);
     return gcd(b, a % b);
 }
 
@@ -97,6 +98,8 @@ class Popcorn {
             this.setView(-this.levels, 0, this.levels, this.levels);
         } else if (this.mode === 'semicircle') {
             this.setView(-this.levels, 0, this.levels, this.levels);
+        } else if (this.mode === 'rationals') {
+            this.setView(-this.levels, 0, this.levels, this.levels);
         } else {
             console.error(`Unknown mode: ${this.mode}`);
         }
@@ -124,7 +127,7 @@ class Popcorn {
             this.context.save();
             this.applyRotation();
             for (let i = 0; i <= this.levels; i++) {
-                for (let j = 0; j <= i; j++) {
+                for (let j = (this.mode === 'rationals' ? -this.levels : 0); j <= (this.mode === 'rationals' ? this.levels : i); j++) {
                     if (gcd(i, j) === 1) {
                         if (this.colour == 'black') {
                             this.context.fillStyle = 'black';
@@ -160,6 +163,8 @@ class Popcorn {
                         } else if (this.mode === 'semicircle') {
                             const theta = Math.PI * j / i;
                             this.plot(-i*Math.cos(theta), i*Math.sin(theta), 0.5);
+                        } else if (this.mode === 'rationals') {
+                            this.plot(j, i, 0.3);
                         }
                     }
                 }

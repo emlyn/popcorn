@@ -148,7 +148,7 @@ class Popcorn {
                             const d = j - 1;
                             this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
                         } else if (this.colour == 'symmetric') {
-                            const d = Math.min(j, Math.abs(i - j)) - 1;
+                            const d = Math.min(Math.abs(j), Math.abs(i - Math.abs(j))) - 1;
                             this.context.fillStyle = `hsl(${(d % 10) * 36}, 100%, 40%)`;
                         } else if (this.colour == 'ratio') {
                             const d = j == 0 ? 0 : (Math.floor(36 * i / j) - 36) % 360;

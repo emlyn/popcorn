@@ -27,6 +27,20 @@ a:hover {
     line-height: 150%;
 }
 
+#popup {
+    display: none;
+    position: absolute;
+}
+
+#popup.visible {
+    display: block;
+    background-color: rgba(255, 255, 153, 0.9);
+    border: 2px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
 /* The button used to open the sidebar */
 #sidebtn {
     z-index: 2; /* Stay on top of the sidebar */

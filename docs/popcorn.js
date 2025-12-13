@@ -181,6 +181,55 @@ class Popcorn {
             this.context.restore();
         }
     }
+    nearestPoint(x, y) {
+        const m = this.getTransform();
+        const p = this.xformPoint({x: x, y: y}, m.inverse());
+        let i0 = p.y, j0 = p.x;
+        if (this.mode === 'normal') {
+            i0 = 1 / p.y;
+            j0 = i0 * p.x;
+        } else if (this.mode === 'invert') {
+            i0 = p.y;
+            j0 = i0 * p.x;
+        } else if (this.mode === 'stretch') {
+            i0 = p.y;
+            j0 = (p.x / i0 + 1) / 2 * i0;
+        } else if (this.mode === 'semicircle') {
+            i0 = Math.sqrt(p.x * p.x + p.y * p.y);
+            const theta = Math.acos(-p.x / i0);
+            j0 = theta * i0 / Math.PI;
+        }
+        return [Math.round(i0), Math.round(j0)];
+    }
+    showinfo(event) {
+        const popup = document.getElementById('popup');
+        if (!popup || !popup.classList.contains('visible')) return;
+        const [i, j] = this.nearestPoint(event.clientX, event.clientY);
+        let x = j, y = i;
+        if (this.mode === 'normal') {
+            // r = 0.03/i;
+            x = j/i;
+            y = 1/i;
+        } else if (this.mode === 'invert') {
+            // r = 0.01/Math.sqrt(i);
+            x = j/i;
+        } else if (this.mode === 'stretch') {
+            // r = 0.5
+            x = (2*j/i-1)*i;
+        } else if (this.mode === 'semicircle') {
+            // r = 0.5;
+            const theta = Math.PI * j / i;
+            x = -i*Math.cos(theta);
+            y = i*Math.sin(theta);
+        } else if (this.mode === 'rationals') {
+            // r = 0.3;
+        }
+        const p = this.xformPoint({x: x, y: y}, this.getTransform());
+        popup.style.left = (p.x + 10) + 'px';
+        popup.style.top = (p.y - popup.offsetHeight - 10) + 'px';
+        popup.innerText = `${j} / ${i}`;
+        console.log("info", j, i);
+    }
     plot(x, y, r) {
         let rh = r;
         if (this.rotatemode != 1) rh *= this.aspect();
@@ -191,6 +240,10 @@ class Popcorn {
     mousedown(event) {
         if (event.button == 0) {
             this.dragging = true;
+        } else if (event.button == 1) {
+            console.log(`Middle click: toggling popup`);
+            document.getElementById('popup').classList.toggle('visible');
+            this.showinfo(event);
         }
         event.preventDefault();
     }
@@ -217,6 +270,7 @@ class Popcorn {
             }
             this.draw();
         }
+        this.showinfo(event);
     }
     mousewheel(event) {
         const p = this.getPoint(event.clientX, event.clientY);
@@ -231,6 +285,7 @@ class Popcorn {
         }
         this.context.translate(-p.x, -p.y);
         this.draw();
+        this.showinfo(event);
         event.preventDefault();
     }
     keydown(event) {

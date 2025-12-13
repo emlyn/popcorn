@@ -126,6 +126,14 @@ class Popcorn {
         try {
             this.context.save();
             this.applyRotation();
+            if (this.mode === 'rationals' || this.mode === 'semicircle' || this.mode === 'stretch') {
+                const r1 = this.mode === 'rationals' ? 0.3 : 0.5;
+                const r2 = this.mode === 'rationals' ? 0.2 : 0.35;
+                this.context.fillStyle = 'black'
+                this.plot(0, 0, r1);
+                this.context.fillStyle = 'white'
+                this.plot(0, 0, r2);
+            }
             for (let i = 0; i <= this.levels; i++) {
                 for (let j = (this.mode === 'rationals' ? -this.levels : 0); j <= (this.mode === 'rationals' ? this.levels : i); j++) {
                     if (gcd(i, j) === 1) {

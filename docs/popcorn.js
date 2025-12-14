@@ -244,8 +244,10 @@ class Popcorn {
     resize() {
         // Prevent transform from resetting on resize
         const m = this.context.getTransform();
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        this.canvas.width = window.innerWidth * 2;
+        this.canvas.height = window.innerHeight * 2;
+        this.canvas.style.width = window.innerWidth + 'px';
+        this.canvas.style.height = window.innerHeight + 'px';
         this.context.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
         this.draw();
     }

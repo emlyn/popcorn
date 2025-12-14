@@ -33,6 +33,7 @@ class Plot {
     }
     initialSize(_levels) {}
     toPoint(_i, _j) {}
+    isPoint(i, j, levels) { return i >= 0 && j >= 0 && i <= j && j <= levels && gcd(i, j) === 1; }
     dotRadius(_i, _j) {}
     toRatio(_p) {}
     * ratios(levels) { yield* Plot.ratios(0, 0, d => d, levels); }
@@ -107,6 +108,7 @@ new class extends Plot {
         return 0.5;
     }
     toRatio(p) {
+        if (p.y < -1) return undefined;
         const j = Math.sqrt(p.x * p.x + p.y * p.y);
         const theta = Math.acos(-p.x / j);
         const i = theta * j / Math.PI;
@@ -123,6 +125,9 @@ new class extends Plot {
     }
     toPoint(i, j) {
         return {x: i, y: j};
+    }
+    isPoint(i, j, levels) {
+        return i >= -levels && j >= 0 && i <= levels && j <= levels && gcd(i, j) === 1;
     }
     dotRadius(_i, _j) {
         return 0.3;
@@ -298,18 +303,18 @@ class Popcorn {
     nearestPoint(x, y) {
         const m = this.getTransform();
         const p = this.xformPoint({x: x, y: y}, m.inverse());
-        let [i0, j0] = this.plot.toRatio(p);
-        for (let ii = Math.max(0, Math.floor(i0) - 5); ii < Math.max(1, Math.floor(i0) + 5); ii++) {
-            for (let jj = Math.floor(j0) - 5; jj < Math.floor(j0) + 5; jj++) {
-
-            }
-        }
-        return [Math.round(i0), Math.round(j0)];
+        let [i, j] = this.plot.toRatio(p);
+        return [Math.round(i), Math.round(j)];
     }
     showinfo(event) {
         const popup = document.getElementById('popup');
         if (!popup || !popup.classList.contains('visible')) return;
         const [i, j] = this.nearestPoint(event.clientX, event.clientY);
+        if (!this.plot.isPoint(i, j, this.levels)) {
+            popup.style.left = '-1000px';
+            popup.style.top = '-1000px';
+            return;
+        }
         const p = this.xformPoint(this.plot.toPoint(i, j), this.getTransform());
         popup.style.left = (p.x + 10) + 'px';
         popup.style.top = (p.y - popup.offsetHeight - 10) + 'px';
@@ -388,6 +393,13 @@ class Popcorn {
             this.rotatemode = (this.rotatemode + 1) % 3;
             console.log(`Rotation mode changed to ${this.rotatemode}`);
             this.draw();
+            event.preventDefault();
+        } else if (event.key == 'i' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            const popup = document.getElementById('popup');
+            popup.style.left = '-1000px';
+            popup.style.top = '-1000px';
+            popup.classList.toggle('visible');
+            console.log(`Toggling info popup to ${popup.classList.contains('visible')}`);
             event.preventDefault();
         }
     }

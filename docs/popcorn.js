@@ -410,6 +410,7 @@ class Popcorn {
 function init() {
     const canvas = document.getElementById('canvas');
     const popcorn = new Popcorn(canvas);
+    globalThis.popcorn = popcorn;
     document.getElementById('levels').oninput = function() {
         const levels = Math.floor(10**parseFloat(this.value));
         console.log(`Levels changed to ${levels} (${this.value})`);
